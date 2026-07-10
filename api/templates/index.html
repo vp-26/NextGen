@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextGen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glow-sphere {
+            filter: blur(120px);
+            opacity: 0.12;
+            z-index: -1;
+            pointer-events: none;
+            animation: pulseGlow 8s infinite alternate;
+            transition: opacity 0.5s ease, filter 0.5s ease;
+        }
+
+        .glow-hidden {
+            opacity: 0 !important;
+            filter: blur(0px) !important;
+        }
+
+        @keyframes pulseGlow {
+            0% {
+                transform: scale(1);
+                opacity: 0.12;
+            }
+
+            100% {
+                transform: scale(1.1);
+                opacity: 0.18;
+            }
+        }
+
+        /* PREMIUM SPEEDOMETER ANIMATION */
+        .speed-line {
+            stroke-dasharray: 40;
+            animation: speedRotate 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            transform-origin: center;
+        }
+
+        @keyframes speedRotate {
+            0% {
+                transform: rotate(0deg);
+                stroke-dashoffset: 40;
+            }
+
+            50% {
+                stroke-dashoffset: 0;
+            }
+
+            100% {
+                transform: rotate(360deg);
+                stroke-dashoffset: -40;
+            }
+        }
+
+        .button {
+            position: relative;
+            background-color: #000000;
+            color: #ffffff;
+            border: 2px solid #ac9548;
+            border-radius: 14px;
+            padding: 12px 28px;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.11em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            text-decoration: none;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ac9548b6;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1;
+        }
+
+        .button span {
+            position: relative;
+            z-index: 2;
+            transition: color 0.4s ease;
+        }
+
+        .button:hover {
+            color: #000000;
+            border-color: #ac9548;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(172, 149, 72, 0.35);
+        }
+
+        .button:hover::before {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        .faq-trigger[aria-expanded="true"] svg {
+            transform: rotate(180deg);
+        }
+
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="bg-[#0a0a0a] text-white font-sans min-h-screen flex flex-col overflow-x-hidden relative m-0 p-0">
+
+    <div id="toast"
+        class="fixed top-5 right-5 z-50 transform translate-x-80 opacity-0 transition-all duration-500 backdrop-blur-xl bg-black/80 border border-[#ac9548] p-4 rounded-2xl shadow-[0_10px_30px_rgba(172,149,72,0.2)] flex items-center gap-3">
+        <div class="p-1 bg-[#ac9548]/20 rounded-full text-[#ac9548]">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        <div>
+            <p class="text-xs font-bold text-white">Success</p>
+            <p class="text-[11px] text-zinc-400">Media file fetched successfully!</p>
+        </div>
+    </div>
+
+    <header class="w-full max-w-7xl mx-auto px-6 pt-6 flex justify-between items-center z-30">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <span
+                    class="text-2xl font-black tracking-tighter bg-gradient-to-r from-[#ac9548] via-white to-[#ac9548] bg-clip-text text-transparent italic selection:bg-transparent">
+                    NextGen
+                </span>
+                <span class="h-1.5 w-1.5 rounded-full bg-[#ac9548] animate-pulse"></span>
+            </div>
+
+            <a href="{{ url_for('contact') }}"
+                class="text-[11px] font-black uppercase tracking-widest text-zinc-400 hover:text-[#ac9548] transition-all duration-200 border-l border-zinc-800 pl-6 flex items-center gap-1.5 group">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5"
+                    stroke="currentColor"
+                    class="w-3.5 h-3.5 text-zinc-500 group-hover:text-[#ac9548] transition-colors">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                </svg>
+                Contact Us
+            </a>
+        </div>
+
+        <div
+            class="flex items-center gap-2 bg-black/40 backdrop-blur-md border border-zinc-900 px-4 py-2 rounded-full shadow-lg shadow-black/40">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Ambient Light</span>
+            <button id="glow-toggle"
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-[#ac9548] shadow-[0_0_10px_rgba(172,149,72,0.5)]">
+                <span id="glow-toggle-dot"
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-black shadow ring-0 transition duration-200 ease-in-out translate-x-5"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- QR CODE POPUP MODAL -->
+    <div id="qr-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md px-4">
+        <div class="bg-zinc-950 border-2 border-[#ac9548]/30 p-6 rounded-3xl w-full max-w-xs text-center shadow-2xl transform transition-all duration-300 scale-95 opacity-0"
+            id="qr-modal-card">
+
+            <h4 class="text-sm font-black uppercase tracking-wider text-[#ac9548] mb-1">NextGen Downloader</h4>
+            <p class="text-[10px] text-zinc-500 font-medium mb-5">Open your phone camera to scan and download instantly.
+            </p>
+
+            <div class="bg-white p-4 rounded-2xl inline-block shadow-inner mb-5">
+                <img id="qr-image" src="" alt="QR Code" class="w-40 h-40 object-contain mx-auto">
+            </div>
+
+            <button id="close-qr"
+                class="w-full py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-bold uppercase tracking-wider rounded-xl hover:text-white hover:border-[#ac9548]/30 transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- AMBIENT GLOW SPHERES -->
+    <div id="glow-1" class="glow-sphere absolute w-96 h-96 bg-[#ac9548] top-[-5%] left-[-5%] rounded-full"></div>
+    <div id="glow-2"
+        class="glow-sphere absolute w-[500px] h-[500px] bg-[#ac9548] bottom-[20%] right-[-10%] rounded-full"></div>
+
+    <div
+        class="w-full max-w-7xl mx-auto px-4 pt-6 pb-16 flex-grow flex flex-col items-center justify-center box-border">
+
+        <!-- DOWNLOAD CARD -->
+        <div
+            class="backdrop-blur-3xl bg-black/60 p-8 rounded-3xl border border-[#ac9548]/20 shadow-[0_20px_50px_rgba(0,0,0,0.8)] w-full max-w-md z-10 mb-6">
+            <div class="text-center mb-8">
+                <div class="relative block mb-2">
+                    <h1
+                        class="text-4xl font-extrabold tracking-tighter bg-gradient-to-r from-[#ac9548] via-white to-[#ac9548] bg-clip-text text-transparent italic">
+                        NextGen
+                    </h1>
+                    <div class="w-12 h-[3px] bg-[#ac9548] mx-auto mt-1.5 rounded-full opacity-80"></div>
+                </div>
+                <p class="text-[10px] text-[#ac9548] mt-2 uppercase tracking-widest font-bold">Premium Multi-Video
+                    Downloader</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="relative flex items-center">
+                    <input type="text" id="reel-url" placeholder="Paste Instagram or YouTube link..."
+                        class="w-full pl-5 pr-24 py-4 bg-black/80 border border-[#ac9548]/30 rounded-2xl focus:outline-none focus:border-[#ac9548] transition-all text-white placeholder-zinc-600 text-sm focus:ring-1 focus:ring-[#ac9548]/50">
+
+                    <button id="btn-paste"
+                        class="absolute right-3 px-3 py-1.5 bg-[#ac9548]/10 border border-[#ac9548]/40 hover:bg-[#ac9548]/20 text-[#ac9548] rounded-xl text-[11px] font-bold tracking-wider uppercase transition-all flex items-center gap-1">
+                        <span>Paste</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- QUALITY SELECTOR DROPDOWN -->
+            <div id="quality-container" class="hidden mt-5">
+                <label class="block text-[10px] uppercase font-bold text-zinc-500 tracking-widest mb-2 pl-1">Select
+                    Output Quality</label>
+                <select id="video-quality"
+                    class="w-full px-4 py-3 bg-zinc-950 border border-[#ac9548]/30 rounded-xl text-xs font-semibold text-zinc-300 focus:outline-none focus:border-[#ac9548]">
+                    <option value="best">1080p (Full HD / Best Quality)</option>
+                    <option value="720p">720p (HD Quality)</option>
+                    <option value="mp3">MP3 Audio Only</option>
+                </select>
+            </div>
+
+            <!-- FUTURISTIC SPEEDOMETER LOADING STATUS -->
+            <div id="loading-status"
+                class="hidden mt-6 p-5 bg-zinc-950 border border-[#ac9548]/20 rounded-2xl flex flex-col items-center justify-center gap-3 text-sm font-medium text-[#ac9548]">
+                <svg class="w-10 h-10 text-[#ac9548]" viewBox="0 0 100 100" fill="none">
+                    <circle cx="50" cy="50" r="40" stroke="rgba(172, 149, 72, 0.1)" stroke-width="6"
+                        stroke-linecap="round" />
+                    <circle cx="50" cy="50" r="40" stroke="#ac9548" stroke-width="6" stroke-linecap="round"
+                        class="speed-line" />
+                    <path d="M50 50 L75 35" stroke="#ac9548" stroke-width="4" stroke-linecap="round" id="needle" />
+                </svg>
+                <span id="loading-text" class="text-xs font-bold uppercase tracking-widest text-zinc-400">Fetching video
+                    data...</span>
+            </div>
+
+            <div id="error-box"
+                class="hidden mt-6 p-4 bg-red-950/20 border border-red-900/30 rounded-2xl text-center text-sm font-medium text-red-400 break-words">
+            </div>
+
+            <!-- PREMIUM DOWNLOAD & QR BUTTONS -->
+            <div id="download-container" class="hidden mt-6 flex items-center justify-center gap-3 w-full">
+                <a href="#" id="download-btn" target="_blank" rel="noopener noreferrer" class="button flex-grow">
+                    <span>Download Now</span>
+                </a>
+                <button id="btn-qr"
+                    class="p-3.5 bg-black border-2 border-[#ac9548]/60 hover:bg-[#ac9548]/10 text-[#ac9548] rounded-xl transition-all shadow-lg shadow-black/60 group"
+                    title="Generate QR Code">
+                    <svg class="w-5 h-5 group-hover:scale-105 transition-transform" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- SUPPORTED PLATFORMS ICONS -->
+        <div
+            class="z-10 flex items-center justify-center gap-6 mb-16 opacity-40 grayscale hover:opacity-70 transition-opacity">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-[#ac9548]">Supported:</span>
+            <div class="flex items-center gap-1.5 text-xs font-semibold"><span
+                    class="w-2 h-2 rounded-full bg-[#ac9548]"></span> Instagram</div>
+            <div class="flex items-center gap-1.5 text-xs font-semibold"><span
+                    class="w-2 h-2 rounded-full bg-[#ac9548]"></span> YouTube</div>
+            <div class="flex items-center gap-1.5 text-xs font-semibold"><span
+                    class="w-2 h-2 rounded-full bg-[#ac9548]"></span> Facebook</div>
+        </div>
+
+        <!-- HOW TO DOWNLOAD STEPS -->
+        <div class="w-full text-center z-10 mb-20">
+            <h3
+                class="text-xl font-black tracking-[0.15em] uppercase bg-gradient-to-r from-[#ac9548] via-white to-[#ac9548] bg-clip-text text-transparent mb-1">
+                Steps to Download Videos & Reels
+            </h3>
+            <p class="text-[11px] text-zinc-500 font-medium tracking-wide mb-10">Here's a quick and easy way to do it:
+            </p>
+
+            <div class="relative max-w-6xl mx-auto px-4 md:px-12">
+
+                <!-- Connecting Line -->
+                <div
+                    class="absolute top-10 left-[12%] right-[12%] h-[2px] bg-gradient-to-r from-[#ac9548]/10 via-[#ac9548]/50 to-[#ac9548]/10 hidden md:block">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-10 relative z-10">
+
+                    <div class="flex flex-col items-center text-center group">
+                        <div
+                            class="w-20 h-20 rounded-full bg-black border-2 border-[#ac9548]/30 flex items-center justify-center text-2xl font-black text-[#ac9548] transition-all duration-300 group-hover:border-[#ac9548] group-hover:bg-[#ac9548]/10 group-hover:scale-105">
+                            1
+                        </div>
+
+                        <p
+                            class="mt-5 text-sm font-bold text-zinc-400 group-hover:text-white transition-colors leading-relaxed max-w-[220px]">
+                            Copy link from Instagram or YouTube.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col items-center text-center group">
+                        <div
+                            class="w-20 h-20 rounded-full bg-black border-2 border-[#ac9548]/30 flex items-center justify-center text-2xl font-black text-[#ac9548] transition-all duration-300 group-hover:border-[#ac9548] group-hover:bg-[#ac9548]/10 group-hover:scale-105">
+                            2
+                        </div>
+
+                        <p
+                            class="mt-5 text-sm font-bold text-zinc-400 group-hover:text-white transition-colors leading-relaxed max-w-[220px]">
+                            Paste link into input box.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col items-center text-center group">
+                        <div
+                            class="w-20 h-20 rounded-full bg-black border-2 border-[#ac9548]/30 flex items-center justify-center text-2xl font-black text-[#ac9548] transition-all duration-300 group-hover:border-[#ac9548] group-hover:bg-[#ac9548]/10 group-hover:scale-105">
+                            3
+                        </div>
+
+                        <p
+                            class="mt-5 text-sm font-bold text-zinc-400 group-hover:text-white transition-colors leading-relaxed max-w-[220px]">
+                            Tap the "Download" button.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TWO BOARDS -->
+        <div class="w-full max-w-4xl mx-auto z-10 px-4 mb-20">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- BOARD 1 -->
+                <div
+                    class="backdrop-blur-3xl bg-gradient-to-b from-zinc-950/80 to-black border-2 border-[#ac9548]/30 rounded-2xl p-6 flex items-center justify-between gap-4 transition-all duration-300 hover:border-[#ac9548]/60 group">
+                    <div class="flex items-center gap-4 text-left">
+                        <div
+                            class="p-3.5 bg-[#ac9548]/10 rounded-2xl border border-[#ac9548]/30 group-hover:bg-[#ac9548]/20 transition-all duration-300">
+                            <svg class="w-6 h-6 text-[#ac9548]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-black uppercase tracking-[0.12em] text-[#ac9548]">Website Visits
+                            </h4>
+                            <p class="text-xs text-zinc-500 font-semibold mt-0.5">Real Unique Users</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span
+                            class="text-4xl font-black tracking-tighter bg-gradient-to-r from-[#ac9548] via-white to-[#ac9548] bg-clip-text text-transparent">{{
+                            "{:,}".format(total_visitors) }}</span>
+                        <p
+                            class="text-[9px] uppercase font-extrabold tracking-widest text-emerald-400 mt-1 flex items-center gap-1 bg-emerald-950/30 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                            Tracked
+                        </p>
+                    </div>
+                </div>
+                <!-- BOARD 2 -->
+                <div
+                    class="backdrop-blur-3xl bg-gradient-to-b from-zinc-950/80 to-black border-2 border-[#ac9548]/30 rounded-2xl p-6 flex items-center justify-between gap-4 transition-all duration-300 hover:border-[#ac9548]/60 group">
+                    <div class="flex items-center gap-4 text-left">
+                        <div
+                            class="p-3.5 bg-[#ac9548]/10 rounded-2xl border border-[#ac9548]/30 group-hover:bg-[#ac9548]/20 transition-all duration-300">
+                            <svg class="w-6 h-6 text-[#ac9548]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-black uppercase tracking-[0.12em] text-[#ac9548]">Total Downloads
+                            </h4>
+                            <p class="text-xs text-zinc-500 font-semibold mt-0.5">Successful Media Files</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span id="download-counter-val"
+                            class="text-4xl font-black tracking-tighter bg-gradient-to-r from-[#ac9548] via-white to-[#ac9548] bg-clip-text text-transparent">
+                            {{ "{:,}".format(total_downloads) }}
+                        </span>
+                        <p
+                            class="text-[9px] uppercase font-extrabold tracking-widest text-sky-400 mt-1 flex items-center gap-1 bg-sky-950/30 px-2 py-0.5 rounded-full border border-sky-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-sky-500 inline-block animate-pulse"></span> Live
+                            Count
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ SECTION -->
+        <div class="w-full max-w-3xl mx-auto z-10 px-4 mb-8">
+            <h3
+                class="text-lg font-black tracking-[0.15em] uppercase text-center bg-gradient-to-r from-[#ac9548] via-white to-[#ac9548] bg-clip-text text-transparent mb-8">
+                Frequently Asked Questions
+            </h3>
+            <div class="space-y-4">
+                <div
+                    class="border border-zinc-900 bg-zinc-950/40 backdrop-blur-md rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#ac9548]/20">
+                    <button
+                        class="faq-trigger w-full px-6 py-4 flex items-center justify-between text-left font-bold text-sm tracking-wide text-zinc-200 hover:text-[#ac9548] transition-colors"
+                        aria-expanded="false">
+                        <span>Is NextGen multi-downloader completely free to use?</span>
+                        <svg class="w-4 h-4 text-[#ac9548] transition-transform duration-300" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <div class="faq-content bg-black/20 text-xs text-zinc-500 font-medium leading-relaxed">
+                        <div class="px-6 pb-4">Yes! NextGen is 100% free and requires no registration or subscription.
+                            You can download unlimited videos, reels, and audios instantly.</div>
+                    </div>
+                </div>
+                <div
+                    class="border border-zinc-900 bg-zinc-950/40 backdrop-blur-md rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#ac9548]/20">
+                    <button
+                        class="faq-trigger w-full px-6 py-4 flex items-center justify-between text-left font-bold text-sm tracking-wide text-zinc-200 hover:text-[#ac9548] transition-colors"
+                        aria-expanded="false">
+                        <span>Where do the downloaded files get saved?</span>
+                        <svg class="w-4 h-4 text-[#ac9548] transition-transform duration-300" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <div class="faq-content bg-black/20 text-xs text-zinc-500 font-medium leading-relaxed">
+                        <div class="px-6 pb-4">All files are directly saved to your device's default "Downloads" folder
+                            (on PC, Mac, Android, or iPhone) through your web browser.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PREMIUM FOOTER -->
+    <footer
+        class="w-full border-t border-[#ac9548]/10 bg-black/80 backdrop-blur-xl pt-16 pb-8 z-10 mt-auto text-zinc-400 text-sm">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+                <div class="md:col-span-1 flex flex-col gap-4">
+                    <span
+                        class="text-2xl font-black tracking-tighter bg-gradient-to-r from-[#ac9548] via-white to-[#ac9548] bg-clip-text text-transparent italic">NextGen</span>
+                    <p class="text-xs text-zinc-500 leading-relaxed font-medium">NextGen is a super-fast web-based tool
+                        to download Instagram reels, videos, photos, and YouTube audio/video in original quality —
+                        simple, fast, and free.</p>
+                </div>
+                <div>
+                    <h4
+                        class="text-white font-bold text-xs uppercase tracking-widest mb-4 border-l-2 border-[#ac9548] pl-2.5">
+                        Tools</h4>
+                    <ul class="space-y-2.5 text-xs font-semibold">
+                        <li><a href="#" class="hover:text-[#ac9548] transition-colors">Instagram Reels Downloader</a>
+                        </li>
+                        <li><a href="#" class="hover:text-[#ac9548] transition-colors">YouTube Video Downloader</a></li>
+                        <li><a href="#" class="hover:text-[#ac9548] transition-colors">Photo Downloader</a></li>
+                        <li><a href="#" class="hover:text-[#ac9548] transition-colors">Audio Downloader</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4
+                        class="text-white font-bold text-xs uppercase tracking-widest mb-4 border-l-2 border-[#ac9548] pl-2.5">
+                        Legal</h4>
+                    <ul class="space-y-2.5 text-xs font-semibold">
+                        <li><a href="#" class="hover:text-[#ac9548] transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-[#ac9548] transition-colors">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4
+                        class="text-white font-bold text-xs uppercase tracking-widest mb-4 border-l-2 border-[#ac9548] pl-2.5">
+                        Support</h4>
+                    <ul class="space-y-2.5 text-xs font-semibold">
+                        <li><a href="contact.php" class="hover:text-[#ac9548] transition-colors">Contact Us</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="w-full h-[1px] bg-zinc-900 my-6"></div>
+
+            <div
+                class="flex flex-col md:flex-row items-start justify-between gap-6 text-[11px] text-zinc-600 font-medium">
+                <div class="max-w-2xl space-y-1.5">
+                    <p><strong class="text-zinc-500">NextGen.net</strong> is not connected to Instagram™ or any other
+                        social platforms. We do not host or store files on our servers; all content belongs to its
+                        original owners.</p>
+                    <p>Please do not use our tool for copyrighted or restricted content. We comply with DMCA policies
+                        and respond to all valid infringement notices.</p>
+                </div>
+                <div class="flex flex-col md:items-end gap-1 shrink-0 w-full md:w-auto mt-4 md:mt-0">
+                    <p class="text-zinc-500 font-semibold">&copy; 2026 NextGen - All Rights Reserved.</p>
+                    <p class="text-[10px] text-zinc-700">Made with 💛 by ~ VP</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const urlInput = document.getElementById('reel-url');
+        const btnPaste = document.getElementById('btn-paste');
+        const qualityContainer = document.getElementById('quality-container');
+        const loadingStatus = document.getElementById('loading-status');
+        const loadingText = document.getElementById('loading-text');
+        const errorBox = document.getElementById('error-box');
+        const downloadContainer = document.getElementById('download-container');
+        const downloadBtn = document.getElementById('download-btn');
+        const downloadCounterVal = document.getElementById('download-counter-val');
+        const toast = document.getElementById('toast');
+
+        const glowToggle = document.getElementById('glow-toggle');
+        const glowToggleDot = document.getElementById('glow-toggle-dot');
+        const glow1 = document.getElementById('glow-1');
+        const glow2 = document.getElementById('glow-2');
+
+        const btnQr = document.getElementById('btn-qr');
+        const qrModal = document.getElementById('qr-modal');
+        const qrModalCard = document.getElementById('qr-modal-card');
+        const closeQr = document.getElementById('close-qr');
+        const qrImage = document.getElementById('qr-image');
+
+        let currentFetchedUrl = "";
+        let currentQrId = "";
+
+        // WEB AUDIO API - PREMIUM POP SOUND GENERATOR
+        function playPremiumFeedbackSound() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(160, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.04);
+
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.05);
+            } catch (e) {
+                console.log("Audio feedback block by browser");
+            }
+        }
+
+        // AMBIENT LIGHT SWITCH TOGGLE
+        let isGlowOn = true;
+        glowToggle.addEventListener('click', () => {
+            playPremiumFeedbackSound();
+            isGlowOn = !isGlowOn;
+            if (isGlowOn) {
+                glowToggleDot.classList.remove('translate-x-0');
+                glowToggleDot.classList.add('translate-x-5');
+                glowToggle.style.backgroundColor = '#ac9548';
+                glowToggle.style.boxShadow = '0 0 10px rgba(172,149,72,0.5)';
+                glow1.classList.remove('glow-hidden');
+                glow2.classList.remove('glow-hidden');
+            } else {
+                glowToggleDot.classList.remove('translate-x-5');
+                glowToggleDot.classList.add('translate-x-0');
+                glowToggle.style.backgroundColor = '#27272a';
+                glowToggle.style.boxShadow = 'none';
+                glow1.classList.add('glow-hidden');
+                glow2.classList.add('glow-hidden');
+            }
+        });
+
+        btnQr.addEventListener('click', () => {
+            playPremiumFeedbackSound();
+            if (currentQrId) {
+                const ourBrandUrl = `${window.location.origin}/qr/${currentQrId}`;
+                const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(ourBrandUrl)}&margin=10`;
+                qrImage.src = apiUrl;
+
+                qrModal.classList.remove('hidden');
+                qrModal.classList.add('flex');
+                setTimeout(() => {
+                    qrModalCard.classList.remove('scale-95', 'opacity-0');
+                    qrModalCard.classList.add('scale-100', 'opacity-100');
+                }, 50);
+            }
+        });
+
+        closeQr.addEventListener('click', () => {
+            playPremiumFeedbackSound();
+            qrModalCard.classList.remove('scale-100', 'opacity-100');
+            qrModalCard.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                qrModal.classList.add('hidden');
+                qrModal.classList.remove('flex');
+            }, 300);
+        });
+
+        // AUTO PASTE BUTTON CLICK WITH AUDIO
+        btnPaste.addEventListener('click', async () => {
+            playPremiumFeedbackSound();
+            try {
+                const text = await navigator.clipboard.readText();
+                urlInput.value = text;
+                processDownload();
+            } catch (err) {
+                console.log('Clipboard access denied');
+            }
+        });
+
+        // FAQ ACCORDION CLICK WITH AUDIO
+        document.querySelectorAll('.faq-trigger').forEach(button => {
+            button.addEventListener('click', () => {
+                playPremiumFeedbackSound();
+                const expanded = button.getAttribute('aria-expanded') === 'true';
+                button.setAttribute('aria-expanded', !expanded);
+                const content = button.nextElementSibling;
+                if (!expanded) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                } else {
+                    content.style.maxHeight = "0";
+                }
+            });
+        });
+
+        urlInput.addEventListener('change', function () {
+            processDownload();
+        });
+        urlInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                processDownload();
+            }
+        });
+
+        function processDownload() {
+            const url = urlInput.value.trim();
+            const isInstagram = url.includes('instagram.com/');
+            const isYouTube = url.includes('youtube.com/') || url.includes('youtu.be/');
+
+            if (isInstagram || isYouTube) {
+                errorBox.classList.add('hidden');
+                downloadContainer.classList.add('hidden');
+                qualityContainer.classList.add('hidden');
+
+                loadingText.innerText = isInstagram ? "TURBO FETCHING FROM INSTAGRAM..." : "TURBO FETCHING FROM YOUTUBE...";
+                loadingStatus.classList.remove('hidden');
+
+                fetch("/ajax_url?ajax_url=" + encodeURIComponent(url))
+                    .then(response => response.json())
+                    .then(data => {
+                        loadingStatus.classList.add('hidden');
+                        if (data.status === 'success' && data.url) {
+                            currentFetchedUrl = data.url;
+                            currentQrId = data.qr_id;
+
+                            downloadBtn.href = data.url;
+
+                            qualityContainer.classList.remove('hidden');
+                            downloadContainer.classList.remove('hidden');
+
+                            toast.classList.remove('translate-x-80', 'opacity-0');
+                            setTimeout(() => {
+                                toast.classList.add('translate-x-80', 'opacity-0');
+                            }, 4000);
+                        } else {
+                            errorBox.innerText = data.message || "Failed to fetch video URL.";
+                            errorBox.classList.remove('hidden');
+                        }
+                    })
+                    .catch(err => {
+                        loadingStatus.classList.add('hidden');
+                        errorBox.innerText = "Backend Error: " + err.message;
+                        errorBox.classList.remove('hidden');
+                        console.error(err);
+                    });
+            }
+        }
+
+        downloadBtn.addEventListener('click', function () {
+            playPremiumFeedbackSound();
+            fetch("/track_download")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && downloadCounterVal) {
+                        downloadCounterVal.innerText = Number(data.new_count).toLocaleString();
+                    }
+                })
+                .catch(err => console.log('Error tracking'));
+        });
+    </script>
+</body>
+
+</html>

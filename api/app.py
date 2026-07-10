@@ -1,12 +1,14 @@
 from flask import Flask, request, jsonify, session, redirect, render_template, g
 from pymongo import MongoClient
-import subprocess
 import json
 import uuid
 import os
 import sys
 
-app = Flask(__name__)
+# अपने ही फोल्डर (api) से fetch.py के फंक्शन को इम्पोर्ट कर रहे हैं
+from api.fetch import fetch_media_data 
+
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = "your_secret_key"
 
 # MongoDB Connection
@@ -17,7 +19,7 @@ db = client["VeloraDrive"]
 stats_collection = db["website_stats"]
 
 try:
-    client.admin.command("ping")
+    client.admin.command('ping')
     print("MongoDB Connected Successfully")
 except Exception as e:
     print("MongoDB Connection Error:", e)
@@ -27,38 +29,30 @@ if stats_collection.count_documents({"name": "main"}) == 0:
         {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
     )
 
-
 # Helper Function
 def get_stats():
     stats = stats_collection.find_one({"name": "main"})
-
     if not stats:
         stats = {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
         stats_collection.insert_one(stats)
-
     return stats
-
 
 # Visitor Counter
 @app.before_request
 def visitor_counter():
-
     if request.path in ["/ajax_url", "/track_download", "/favicon.ico"]:
         return
-
     if request.cookies.get("visitor_counted"):
         return
-
-    stats_collection.update_one({"name": "main"}, {"$inc": {"visitors": 1}})
-
-    g.set_visitor_cookie = True
-
+    try:
+        stats_collection.update_one({"name": "main"}, {"$inc": {"visitors": 1}})
+        g.set_visitor_cookie = True
+    except Exception as e:
+        print("Error updating visitor count:", e)
 
 @app.after_request
 def after_request(response):
-
     if getattr(g, "set_visitor_cookie", False):
-
         response.set_cookie(
             "visitor_counted",
             "yes",
@@ -66,59 +60,45 @@ def after_request(response):
             httponly=True,
             samesite="Lax",
         )
-
     return response
-
 
 # Home
 @app.route("/")
 def index():
-
-    stats = get_stats()
-
-    return render_template(
-        "index.html",
-        total_visitors=stats["visitors"],
-        total_downloads=stats["downloads"],
-    )
-
+    try:
+        stats = get_stats()
+        return render_template(
+            "index.html",
+            total_visitors=stats["visitors"],
+            total_downloads=stats["downloads"],
+        )
+    except Exception as e:
+        return f"Error rendering index: {str(e)}", 500
 
 # Contact
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
 
-
 # Download Counter
 @app.route("/track_download")
 def track_download():
-
     stats_collection.update_one({"name": "main"}, {"$inc": {"downloads": 1}})
-
     stats = get_stats()
-
     return jsonify({"status": "success", "new_count": stats["downloads"]})
 
-
-# Fetch Media URL
+# Fetch Media URL (UPDATED: No Subprocess)
 @app.route("/ajax_url")
 def ajax_url():
-
     reel_url = request.args.get("ajax_url")
-
     if not reel_url:
         return jsonify({"status": "error", "message": "Empty URL"})
 
     try:
-
-        output = subprocess.check_output(
-            [sys.executable, "fetch.py", reel_url], text=True
-        )
-
-        data = json.loads(output)
+        # यहाँ subprocess की जगह सीधे Python फंक्शन कॉल हो रहा है
+        data = fetch_media_data(reel_url)
 
         if data.get("status") == "success" and "url" in data:
-
             qr_id = uuid.uuid4().hex[:8]
 
             qr_links = session.get("qr_links", {})
@@ -131,32 +111,20 @@ def ajax_url():
                 {"name": "main"},
                 {"$push": {"urls": {"original_url": reel_url}}},
             )
-
         return jsonify(data)
 
-    except subprocess.CalledProcessError as e:
-
-        return jsonify({"status": "error", "message": e.output})
-
     except Exception as e:
-
-        return jsonify({"status": "error", "message": str(e)})
-
+        return jsonify({"status": "error", "message": f"Server Error: {str(e)}"})
 
 # QR Redirect
 @app.route("/qr/<qr_id>")
 def qr_redirect(qr_id):
-
     qr_links = session.get("qr_links", {})
-
     if qr_id in qr_links:
         return redirect(qr_links[qr_id])
-
     return redirect("/")
-
 
 # Local Run
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-
     app.run(host="0.0.0.0", port=port, debug=True)

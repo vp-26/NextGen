@@ -5,14 +5,12 @@ import uuid
 import os
 import sys
 
-# Vercel Serverless environment ke liye absolute path correction
+# Vercel ke andar hi templates hai, toh path bilkul direct hoga
 base_dir = os.path.dirname(os.path.abspath(__file__))
-# Agar file api folder mein hai, toh ek step piche jaakar templates dhoondhega
-template_dir = os.path.abspath(os.path.join(base_dir, "..", "templates"))
+template_dir = os.path.join(base_dir, "templates")
 
 app = Flask(__name__, template_folder=template_dir)
 app.secret_key = "your_secret_key"
-
 # ... (Baki ka saara code bilkul same rahega)
 # MongoDB Connection
 MONGO_URI = "mongodb+srv://veloradrive83_db_user:prince%40987654@cluster0.5kx2nsr.mongodb.net/VeloraDrive?retryWrites=true&w=majority"

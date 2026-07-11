@@ -5,10 +5,9 @@ import uuid
 import os
 import sys
 
-# अपने ही फोल्डर (api) से fetch.py के फंक्शन को इम्पोर्ट कर रहे हैं
-from api.fetch import fetch_media_data 
+from api.fetch import fetch_media_data
 
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+app = Flask(__name__, template_folder="templates")
 app.secret_key = "your_secret_key"
 
 # MongoDB Connection
@@ -19,7 +18,7 @@ db = client["VeloraDrive"]
 stats_collection = db["website_stats"]
 
 try:
-    client.admin.command('ping')
+    client.admin.command("ping")
     print("MongoDB Connected Successfully")
 except Exception as e:
     print("MongoDB Connection Error:", e)
@@ -29,6 +28,7 @@ if stats_collection.count_documents({"name": "main"}) == 0:
         {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
     )
 
+
 # Helper Function
 def get_stats():
     stats = stats_collection.find_one({"name": "main"})
@@ -36,6 +36,7 @@ def get_stats():
         stats = {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
         stats_collection.insert_one(stats)
     return stats
+
 
 # Visitor Counter
 @app.before_request
@@ -50,6 +51,7 @@ def visitor_counter():
     except Exception as e:
         print("Error updating visitor count:", e)
 
+
 @app.after_request
 def after_request(response):
     if getattr(g, "set_visitor_cookie", False):
@@ -61,6 +63,7 @@ def after_request(response):
             samesite="Lax",
         )
     return response
+
 
 # Home
 @app.route("/")
@@ -75,10 +78,12 @@ def index():
     except Exception as e:
         return f"Error rendering index: {str(e)}", 500
 
+
 # Contact
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+
 
 # Download Counter
 @app.route("/track_download")
@@ -86,6 +91,7 @@ def track_download():
     stats_collection.update_one({"name": "main"}, {"$inc": {"downloads": 1}})
     stats = get_stats()
     return jsonify({"status": "success", "new_count": stats["downloads"]})
+
 
 # Fetch Media URL (UPDATED: No Subprocess)
 @app.route("/ajax_url")
@@ -116,6 +122,7 @@ def ajax_url():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Server Error: {str(e)}"})
 
+
 # QR Redirect
 @app.route("/qr/<qr_id>")
 def qr_redirect(qr_id):
@@ -123,6 +130,7 @@ def qr_redirect(qr_id):
     if qr_id in qr_links:
         return redirect(qr_links[qr_id])
     return redirect("/")
+
 
 # Local Run
 if __name__ == "__main__":

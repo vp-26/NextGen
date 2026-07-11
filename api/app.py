@@ -5,9 +5,12 @@ import uuid
 import os
 import sys
 
-from api.fetch import fetch_media_data
+# absolute path setup taaki templates properly load ho sakein
+base_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(base_dir, '..', 'templates') 
 
-app = Flask(__name__, template_folder="templates")
+# Agar templates folder api ke andar hi hai toh: os.path.join(base_dir, 'templates') use karein
+app = Flask(__name__, template_folder=template_dir)
 app.secret_key = "your_secret_key"
 
 # MongoDB Connection
@@ -28,7 +31,6 @@ if stats_collection.count_documents({"name": "main"}) == 0:
         {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
     )
 
-
 # Helper Function
 def get_stats():
     stats = stats_collection.find_one({"name": "main"})
@@ -36,7 +38,6 @@ def get_stats():
         stats = {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
         stats_collection.insert_one(stats)
     return stats
-
 
 # Visitor Counter
 @app.before_request
@@ -51,7 +52,6 @@ def visitor_counter():
     except Exception as e:
         print("Error updating visitor count:", e)
 
-
 @app.after_request
 def after_request(response):
     if getattr(g, "set_visitor_cookie", False):
@@ -63,7 +63,6 @@ def after_request(response):
             samesite="Lax",
         )
     return response
-
 
 # Home
 @app.route("/")
@@ -78,12 +77,10 @@ def index():
     except Exception as e:
         return f"Error rendering index: {str(e)}", 500
 
-
 # Contact
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
-
 
 # Download Counter
 @app.route("/track_download")
@@ -92,16 +89,17 @@ def track_download():
     stats = get_stats()
     return jsonify({"status": "success", "new_count": stats["downloads"]})
 
-
 # Fetch Media URL (UPDATED: No Subprocess)
 @app.route("/ajax_url")
 def ajax_url():
+    # Import ko safe side function ke andar rakh sakte hain agar dependency issue ho
+    from api.fetch import fetch_media_data
+    
     reel_url = request.args.get("ajax_url")
     if not reel_url:
         return jsonify({"status": "error", "message": "Empty URL"})
 
     try:
-        # यहाँ subprocess की जगह सीधे Python फंक्शन कॉल हो रहा है
         data = fetch_media_data(reel_url)
 
         if data.get("status") == "success" and "url" in data:
@@ -122,7 +120,6 @@ def ajax_url():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Server Error: {str(e)}"})
 
-
 # QR Redirect
 @app.route("/qr/<qr_id>")
 def qr_redirect(qr_id):
@@ -131,8 +128,7 @@ def qr_redirect(qr_id):
         return redirect(qr_links[qr_id])
     return redirect("/")
 
-
-# Local Run
+# Local Run ke liye condition lagayi hai, Vercel ise ignore karega
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)

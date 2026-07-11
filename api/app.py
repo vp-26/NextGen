@@ -1,13 +1,16 @@
+import os
 from flask import Flask, request, jsonify, session, redirect, render_template, g
 from pymongo import MongoClient
-import json
 import uuid
-import os
-import sys
 
-# absolute path setup (Kyunki app.py root folder mein hai, toh seedhe 'templates' jodenge)
+# Base directories setup
 base_dir = os.path.dirname(os.path.abspath(__file__))
-template_dir = os.path.join(base_dir, 'templates') 
+
+# Dono possibilities handle karna: agar app.py root mein ho ya api folder ke andar
+if os.path.exists(os.path.join(base_dir, 'templates')):
+    template_dir = os.path.join(base_dir, 'templates')
+else:
+    template_dir = os.path.join(base_dir, '..', 'templates')
 
 app = Flask(__name__, template_folder=template_dir)
 app.secret_key = "your_secret_key"
@@ -91,7 +94,6 @@ def track_download():
 # Fetch Media URL
 @app.route("/ajax_url")
 def ajax_url():
-    # Agar fetch.py fail ho raha ho toh import path check karein
     try:
         from api.fetch import fetch_media_data
     except ModuleNotFoundError:

@@ -95,16 +95,21 @@ def track_download():
     return jsonify({"status": "success", "new_count": stats["downloads"]})
 
 
-# Fetch Media URL (Same file context import)
+# Fetch Media URL
 @app.route("/ajax_url")
 def ajax_url():
-    # 'api' folder ke andar hi fetch.py hai, isliye seedhe try karenge
+    # Kyunki index.py aur fetch.py dono ab 'api' folder ke andar hi hain:
     try:
-        from api.fetch import fetch_media_data
+        import fetch
+
+        fetch_media_data = fetch.fetch_media_data
     except ModuleNotFoundError:
-        # Fallback agar root ke context se run ho raha ho
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from fetch import fetch_media_data
+        try:
+            from api import fetch
+
+            fetch_media_data = fetch.fetch_media_data
+        except ModuleNotFoundError:
+            from api.fetch import fetch_media_data
 
     reel_url = request.args.get("ajax_url")
     if not reel_url:

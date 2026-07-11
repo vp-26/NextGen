@@ -2,16 +2,17 @@ import sys
 import os
 from yt_dlp import YoutubeDL
 
-def fetch_media_data(url): # फ़ंक्शन का नाम index.py के हिसाब से मैच कर दिया है
-    # Vercel पर cookies.txt को सिर्फ Read करने के लिए उसका सही पाथ ढूंढना होगा
-    current_dir = os.path.dirname(__file__)
-    cookies_path = os.path.join(current_dir, "..", "cookies.txt") 
-    
+
+def fetch_media_data(url):
+    # Ab cookies.txt aur fetch.py dono same api folder mein hain, toh path bilkul direct hoga
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    cookies_path = os.path.join(current_dir, "cookies.txt")
+
     ydl_opts = {
         "quiet": True,
         "no_warnings": True,
         "format": "best",
-        # अगर आपके पास प्रोजेक्ट रूट में cookies.txt है तो यह उसे उठाएगा, नहीं तो इसे इग्नोर करेगा
+        # Agar api folder ke andar cookies.txt milegi toh use karega, nahi toh None
         "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
         "http_headers": {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -29,8 +30,8 @@ def fetch_media_data(url): # फ़ंक्शन का नाम index.py क
     try:
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            
-            # 1. Multiple entries / Carousel posts के लिए
+
+            # 1. Multiple entries / Carousel posts ke liye
             if "entries" in info:
                 media_list = []
                 for entry in info["entries"]:
@@ -42,10 +43,13 @@ def fetch_media_data(url): # फ़ंक्शन का नाम index.py क
                         media_list.append(entry["formats"][-1]["url"])
 
                 if media_list:
-                    # ध्यान दें: सीधे Python dict रिटर्न कर रहे हैं, json.dumps नहीं
-                    return {"status": "success", "url": media_list[0], "type": "multiple"}
+                    return {
+                        "status": "success",
+                        "url": media_list[0],
+                        "type": "multiple",
+                    }
 
-            # 2. Single Video/Image/Audio के लिए
+            # 2. Single Video/Image/Audio ke liye
             media_url = None
             media_type = "video"
 
@@ -61,19 +65,26 @@ def fetch_media_data(url): # फ़ंक्शन का नाम index.py क
                     elif info["ext"] in ["jpg", "jpeg", "png", "webp"]:
                         media_type = "image"
 
-                if "audio" in media_url or ("vcodec" in info and info["vcodec"] == "none"):
+                if "audio" in media_url or (
+                    "vcodec" in info and info["vcodec"] == "none"
+                ):
                     media_type = "audio"
 
                 return {"status": "success", "url": media_url, "type": media_type}
             else:
-                return {"status": "error", "message": "Could not find any downloadable content."}
+                return {
+                    "status": "error",
+                    "message": "Could not find any downloadable content.",
+                }
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# स्थानीय रूप से (Locally) टेस्टिंग के लिए यह ब्लॉक अभी भी काम करेगा
+
+# Local testing ke liye
 if __name__ == "__main__":
     import json
+
     if len(sys.argv) > 1:
         input_url = sys.argv[1]
         print(json.dumps(fetch_media_data(input_url)))

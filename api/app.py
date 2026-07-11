@@ -5,11 +5,10 @@ import uuid
 import os
 import sys
 
-# absolute path setup taaki templates properly load ho sakein
+# absolute path setup (Kyunki app.py root folder mein hai, toh seedhe 'templates' jodenge)
 base_dir = os.path.dirname(os.path.abspath(__file__))
-template_dir = os.path.join(base_dir, '..', 'templates') 
+template_dir = os.path.join(base_dir, 'templates') 
 
-# Agar templates folder api ke andar hi hai toh: os.path.join(base_dir, 'templates') use karein
 app = Flask(__name__, template_folder=template_dir)
 app.secret_key = "your_secret_key"
 
@@ -89,11 +88,14 @@ def track_download():
     stats = get_stats()
     return jsonify({"status": "success", "new_count": stats["downloads"]})
 
-# Fetch Media URL (UPDATED: No Subprocess)
+# Fetch Media URL
 @app.route("/ajax_url")
 def ajax_url():
-    # Import ko safe side function ke andar rakh sakte hain agar dependency issue ho
-    from api.fetch import fetch_media_data
+    # Agar fetch.py fail ho raha ho toh import path check karein
+    try:
+        from api.fetch import fetch_media_data
+    except ModuleNotFoundError:
+        from fetch import fetch_media_data
     
     reel_url = request.args.get("ajax_url")
     if not reel_url:
@@ -123,12 +125,11 @@ def ajax_url():
 # QR Redirect
 @app.route("/qr/<qr_id>")
 def qr_redirect(qr_id):
-    qr_links = session.get("qr_links", {})
-    if qr_id in qr_links:
-        return redirect(qr_links[qr_id])
+    clear_links = session.get("qr_links", {})
+    if qr_id in clear_links:
+        return redirect(clear_links[qr_id])
     return redirect("/")
 
-# Local Run ke liye condition lagayi hai, Vercel ise ignore karega
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)

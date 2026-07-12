@@ -43,27 +43,43 @@ def get_stats():
 # Visitor Counter
 @app.before_request
 def visitor_counter():
-    if request.path in ["/ajax_url", "/track_download", "/favicon.ico"]:
+    if request.path in [
+        "/ajax_url",
+        "/track_download",
+        "/favicon.ico",
+    ] or request.path.startswith("/static"):
         return
-    if request.cookies.get("visitor_counted"):
+
+    if request.cookies.get("visitor_counted") == "yes":
         return
+
     try:
-        stats_collection.update_one({"name": "main"}, {"$inc": {"visitors": 1}})
+        result = stats_collection.update_one(
+            {"name": "main"}, {"$inc": {"visitors": 1}}
+        )
+
+        print(
+            f"Database Visitor Increment Result: {result.modified_count} row modified."
+        )
         g.set_visitor_cookie = True
     except Exception as e:
-        print("Error updating visitor count:", e)
+        print("Error updating visitor count in DB:", e)
 
 
 @app.after_request
 def after_request(response):
     if getattr(g, "set_visitor_cookie", False):
-        response.set_cookie(
-            "visitor_counted",
-            "yes",
-            max_age=60 * 60 * 24 * 7,
-            httponly=True,
-            samesite="Lax",
-        )
+        try:
+            response.set_cookie(
+                "visitor_counted",
+                "yes",
+                max_age=60 * 60 * 24 * 7,
+                httponly=True,
+                samesite="Lax",
+                secure=True,
+            )
+        except Exception as e:
+            print("Error setting cookie:", e)
     return response
 
 

@@ -5,13 +5,15 @@ import uuid
 import os
 import sys
 
-# Vercel ke andar hi templates hai, toh path bilkul direct hoga
+# Vercel/Render templates path setup
 base_dir = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(base_dir, "templates")
 
 app = Flask(__name__, template_folder=template_dir)
-app.secret_key = "your_secret_key"
-# ... (Baki ka saara code bilkul same rahega)
+
+# WARNING: Security ke liye secret key ko environment variable se lena best hota hai
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "your_secret_key")
+
 # MongoDB Connection
 MONGO_URI = "mongodb+srv://veloradrive83_db_user:prince%40987654@cluster0.5kx2nsr.mongodb.net/VeloraDrive?retryWrites=true&w=majority"
 
@@ -40,10 +42,12 @@ def get_stats():
     return stats
 
 
-# Visitor Counter
+# Visitor Counter (Updated to exclude /ping)
 @app.before_request
 def visitor_counter():
+    # Yahan humne '/ping' ko add kiya hai taaki auto-ping se visitor count na badhe
     if request.path in [
+        "/ping",
         "/ajax_url",
         "/track_download",
         "/favicon.ico",
@@ -57,10 +61,7 @@ def visitor_counter():
         result = stats_collection.update_one(
             {"name": "main"}, {"$inc": {"visitors": 1}}
         )
-
-        print(
-            f"Database Visitor Increment Result: {result.modified_count} row modified."
-        )
+        print(f"Database Visitor Increment Result: {result.modified_count} row modified.")
         g.set_visitor_cookie = True
     except Exception as e:
         print("Error updating visitor count in DB:", e)
@@ -81,6 +82,15 @@ def after_request(response):
         except Exception as e:
             print("Error setting cookie:", e)
     return response
+
+
+# ==========================================
+# 🚀 NEW: PING ROUTE FOR UPTIME MONITORING
+# ==========================================
+@app.route("/ping")
+def ping():
+    """Yeh route website ko Render par zinda (active) rakhega"""
+    return jsonify({"status": "alive", "message": "Keep awake request successful!"}), 200
 
 
 # Home Route
@@ -114,15 +124,12 @@ def track_download():
 # Fetch Media URL
 @app.route("/ajax_url")
 def ajax_url():
-    # Kyunki index.py aur fetch.py dono ab 'api' folder ke andar hi hain:
     try:
         import fetch
-
         fetch_media_data = fetch.fetch_media_data
     except ModuleNotFoundError:
         try:
             from api import fetch
-
             fetch_media_data = fetch.fetch_media_data
         except ModuleNotFoundError:
             from api.fetch import fetch_media_data

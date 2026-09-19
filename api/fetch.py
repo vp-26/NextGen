@@ -11,7 +11,8 @@ def fetch_media_data(url):
     ydl_opts = {
         "quiet": True,
         "no_warnings": True,
-        "format": "best",
+        # "format": "best",
+        'format': 'best[vcodec!=none][acodec!=none]/bestvideo+bestaudio/best',
         # Agar api folder ke andar cookies.txt milegi toh use karega, nahi toh None
         "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
         "http_headers": {

@@ -1,7 +1,7 @@
 import sys
 import os
 import json
-from yt_dlp import YoutubeDL
+import shutil
 
 IMAGE_EXT = ("jpg", "jpeg", "png", "webp")
 AUDIO_EXT = ("mp3", "m4a", "wav", "aac")
@@ -64,16 +64,40 @@ def pick_title(info):
     return (info.get("title") or "").strip()[:120]
 
 
-def fetch_media_data(url):
+def get_cookies_path():
+    """Vercel pe file system read-only hoti hai, aur yt-dlp cookies file ko wapas likhta hai.
+    Isliye cookies.txt ko /tmp (writable) mein copy karke wahan se use karte hain."""
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    cookies_path = os.path.join(current_dir, "cookies.txt")
+    src = os.path.join(current_dir, "cookies.txt")
+    if not os.path.exists(src):
+        return None
+    try:
+        dst = os.path.join("/tmp", "cookies.txt")
+        shutil.copyfile(src, dst)
+        return dst
+    except Exception:
+        return None
+
+
+def fetch_media_data(url):
+    # yt-dlp yahin import karte hain taaki install na hone par bhi site crash na ho
+    try:
+        from yt_dlp import YoutubeDL
+    except ImportError:
+        return {
+            "status": "error",
+            "message": "yt-dlp is not installed on the server. Add it to requirements.txt.",
+        }
+
+    cookies_path = get_cookies_path()
 
     ydl_opts = {
         "quiet": True,
         "no_warnings": True,
         # Pehle video+audio single file, phir koi bhi audio wali, phir best
         "format": "b[vcodec!=none][acodec!=none]/b[acodec!=none]/b",
-        "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
+        "cookiefile": cookies_path,
+        "cachedir": False,  # read-only server pe cache folder na banaye
         "http_headers": {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",

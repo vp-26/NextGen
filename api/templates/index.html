@@ -8,6 +8,12 @@
     <title>NextGen</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        html,
+        body {
+            overflow-x: hidden;
+            max-width: 100%;
+        }
+
         html {
             -webkit-tap-highlight-color: transparent;
         }
@@ -213,10 +219,13 @@
     </div>
 
     <!-- AMBIENT GLOW SPHERES -->
-    <div id="glow-1"
-        class="glow-sphere absolute w-64 h-64 sm:w-96 sm:h-96 bg-[#ac9548] top-[-5%] left-[-5%] rounded-full"></div>
-    <div id="glow-2"
-        class="glow-sphere absolute w-72 h-72 sm:w-[500px] sm:h-[500px] bg-[#ac9548] bottom-[20%] right-[-10%] rounded-full">
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div id="glow-1"
+            class="glow-sphere absolute w-64 h-64 sm:w-96 sm:h-96 bg-[#ac9548] top-[-5%] left-[-5%] rounded-full">
+        </div>
+        <div id="glow-2"
+            class="glow-sphere absolute w-72 h-72 sm:w-[500px] sm:h-[500px] bg-[#ac9548] bottom-[20%] right-[-10%] rounded-full">
+        </div>
     </div>
 
     <main

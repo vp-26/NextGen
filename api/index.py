@@ -139,10 +139,15 @@ def track_download():
     return jsonify({"status": "success", "new_count": stats["downloads"]})
 
 
-try:
-    from fetch import fetch_media_data
-except ModuleNotFoundError:
-    from api.fetch import fetch_media_data
+def load_fetcher():
+    """fetch.py ko tab load karo jab zaroorat ho, taaki import error se poori site crash na ho."""
+    try:
+        from fetch import fetch_media_data
+    except ModuleNotFoundError as e:
+        if e.name not in ("fetch", None):
+            raise  # asli missing package (jaise yt_dlp) ka error dikhao
+        from api.fetch import fetch_media_data
+    return fetch_media_data
 
 
 # Fetch media URL
@@ -155,6 +160,7 @@ def ajax_url():
         return jsonify({"status": "error", "message": "Unsupported URL"})
 
     try:
+        fetch_media_data = load_fetcher()
         data = fetch_media_data(reel_url)
 
         if data.get("status") == "success" and "url" in data:
@@ -168,7 +174,7 @@ def ajax_url():
         return jsonify(data)
 
     except Exception as e:
-        print("ajax_url error:", e)
+        print("ajax_url error:", repr(e))
         return jsonify({"status": "error", "message": "Server error, try again."})
 
 

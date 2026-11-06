@@ -786,17 +786,13 @@
                 info.appendChild(title);
                 info.appendChild(meta);
 
-                const again = document.createElement('button');
-                again.type = 'button';
+                const again = document.createElement('a');
+                again.href = /^https?:\/\//i.test(item.url) ? item.url : '#';
+                again.target = '_blank';
+                again.rel = 'noopener noreferrer';
                 again.className = 'shrink-0 px-3 py-2 bg-[#ac9548]/10 border border-[#ac9548]/40 hover:bg-[#ac9548]/20 text-[#ac9548] rounded-xl text-[10px] font-bold tracking-wider uppercase transition-all';
-                again.textContent = 'Again';
-                again.addEventListener('click', () => {
-                    playPremiumFeedbackSound();
-                    urlInput.value = item.url;
-                    lastFetchedInput = '';
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    processDownload();
-                });
+                again.textContent = 'View';
+                again.addEventListener('click', () => playPremiumFeedbackSound());
 
                 row.appendChild(thumbBox);
                 row.appendChild(info);

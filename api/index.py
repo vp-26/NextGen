@@ -1,81 +1,55 @@
-from flask import Flask, request, jsonify, redirect, render_template, g, Response
+from flask import Flask, request, jsonify, session, redirect, render_template, g
 from pymongo import MongoClient
-from datetime import datetime
-from urllib.parse import urlparse
-import requests
+import json
 import uuid
 import os
+import sys
 
+# Vercel/Render templates path setup
 base_dir = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(base_dir, "templates")
 
 app = Flask(__name__, template_folder=template_dir)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(24).hex()
 
-# MONGO_URI ab environment variable se aayega (Vercel/Render settings mein daalo)
-MONGO_URI = os.environ["MONGO_URI"]
+# WARNING: Security ke liye secret key ko environment variable se lena best hota hai
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "your_secret_key")
+
+# MongoDB Connection
+MONGO_URI = "mongodb+srv://veloradrive83_db_user:prince%40987654@cluster0.5kx2nsr.mongodb.net/VeloraDrive?retryWrites=true&w=majority"
 
 client = MongoClient(MONGO_URI)
 db = client["VeloraDrive"]
 stats_collection = db["website_stats"]
-qr_collection = db["qr_links"]
-url_log = db["url_log"]
 
 try:
     client.admin.command("ping")
     print("MongoDB Connected Successfully")
-    stats_collection.update_one(
-        {"name": "main"},
-        {"$setOnInsert": {"visitors": 0, "downloads": 0}},
-        upsert=True,
-    )
-    # QR links 1 ghante baad auto-delete
-    qr_collection.create_index("created_at", expireAfterSeconds=3600)
 except Exception as e:
     print("MongoDB Connection Error:", e)
 
-ALLOWED_DOMAINS = (
-    "instagram.com",
-    "youtube.com",
-    "youtu.be",
-    "facebook.com",
-    "fb.watch",
-)
-
-# Thumbnail sirf in image servers se laya jayega
-THUMB_HOSTS = (
-    "cdninstagram.com",
-    "fbcdn.net",
-    "ytimg.com",
-    "ggpht.com",
-    "googleusercontent.com",
-)
-
-
-def host_matches(u, domains):
-    p = urlparse(u)
-    host = (p.hostname or "").lower()
-    return p.scheme in ("http", "https") and any(
-        host == d or host.endswith("." + d) for d in domains
+if stats_collection.count_documents({"name": "main"}) == 0:
+    stats_collection.insert_one(
+        {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
     )
 
 
+# Helper Function
 def get_stats():
     stats = stats_collection.find_one({"name": "main"})
     if not stats:
-        stats = {"name": "main", "visitors": 0, "downloads": 0}
+        stats = {"name": "main", "visitors": 0, "downloads": 0, "urls": []}
         stats_collection.insert_one(stats)
     return stats
 
 
-# Visitor Counter
+# Visitor Counter (Updated to exclude /ping)
 @app.before_request
 def visitor_counter():
+    # Yahan humne '/ping' ko add kiya hai taaki auto-ping se visitor count na badhe
     if request.path in [
         "/ping",
         "/ajax_url",
         "/track_download",
-        "/thumb",
         "/favicon.ico",
     ] or request.path.startswith("/static"):
         return
@@ -84,7 +58,10 @@ def visitor_counter():
         return
 
     try:
-        stats_collection.update_one({"name": "main"}, {"$inc": {"visitors": 1}})
+        result = stats_collection.update_one(
+            {"name": "main"}, {"$inc": {"visitors": 1}}
+        )
+        print(f"Database Visitor Increment Result: {result.modified_count} row modified.")
         g.set_visitor_cookie = True
     except Exception as e:
         print("Error updating visitor count in DB:", e)
@@ -93,24 +70,30 @@ def visitor_counter():
 @app.after_request
 def after_request(response):
     if getattr(g, "set_visitor_cookie", False):
-        response.set_cookie(
-            "visitor_counted",
-            "yes",
-            max_age=60 * 60 * 24 * 7,
-            httponly=True,
-            samesite="Lax",
-            secure=request.is_secure,
-        )
+        try:
+            response.set_cookie(
+                "visitor_counted",
+                "yes",
+                max_age=60 * 60 * 24 * 7,
+                httponly=True,
+                samesite="Lax",
+                secure=True,
+            )
+        except Exception as e:
+            print("Error setting cookie:", e)
     return response
 
 
-# Ping route (uptime monitoring)
+# ==========================================
+# 🚀 NEW: PING ROUTE FOR UPTIME MONITORING
+# ==========================================
 @app.route("/ping")
 def ping():
+    """Yeh route website ko Render par zinda (active) rakhega"""
     return jsonify({"status": "alive", "message": "Keep awake request successful!"}), 200
 
 
-# Home
+# Home Route
 @app.route("/")
 def index():
     try:
@@ -121,90 +104,71 @@ def index():
             total_downloads=stats["downloads"],
         )
     except Exception as e:
-        print("Index error:", e)
-        return "Something went wrong", 500
+        return f"Error rendering index: {str(e)}", 500
 
 
-# Contact
+# Contact Route
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
 
 
-# Download counter
-@app.route("/track_download", methods=["GET", "POST"])
+# Download Counter
+@app.route("/track_download")
 def track_download():
     stats_collection.update_one({"name": "main"}, {"$inc": {"downloads": 1}})
     stats = get_stats()
     return jsonify({"status": "success", "new_count": stats["downloads"]})
 
 
-try:
-    from fetch import fetch_media_data
-except ModuleNotFoundError:
-    from api.fetch import fetch_media_data
-
-
-# Fetch media URL
+# Fetch Media URL
 @app.route("/ajax_url")
 def ajax_url():
+    try:
+        import fetch
+        fetch_media_data = fetch.fetch_media_data
+    except ModuleNotFoundError:
+        try:
+            from api import fetch
+            fetch_media_data = fetch.fetch_media_data
+        except ModuleNotFoundError:
+            from api.fetch import fetch_media_data
+
     reel_url = request.args.get("ajax_url")
     if not reel_url:
         return jsonify({"status": "error", "message": "Empty URL"})
-    if not host_matches(reel_url, ALLOWED_DOMAINS):
-        return jsonify({"status": "error", "message": "Unsupported URL"})
 
     try:
         data = fetch_media_data(reel_url)
 
         if data.get("status") == "success" and "url" in data:
             qr_id = uuid.uuid4().hex[:8]
-            qr_collection.insert_one(
-                {"_id": qr_id, "url": data["url"], "created_at": datetime.utcnow()}
-            )
+
+            qr_links = session.get("qr_links", {})
+            qr_links[qr_id] = data["url"]
+            session["qr_links"] = qr_links
+
             data["qr_id"] = qr_id
 
-            url_log.insert_one({"original_url": reel_url, "at": datetime.utcnow()})
+            stats_collection.update_one(
+                {"name": "main"},
+                {"$push": {"urls": {"original_url": reel_url}}},
+            )
         return jsonify(data)
 
     except Exception as e:
-        print("ajax_url error:", e)
-        return jsonify({"status": "error", "message": "Server error, try again."})
+        return jsonify({"status": "error", "message": f"Server Error: {str(e)}"})
 
 
-# Thumbnail proxy (history ke liye)
-@app.route("/thumb")
-def thumb():
-    u = request.args.get("u", "")
-    if not host_matches(u, THUMB_HOSTS):
-        return "", 400
-    try:
-        r = requests.get(
-            u,
-            timeout=8,
-            stream=True,
-            allow_redirects=False,
-            headers={"User-Agent": "Mozilla/5.0"},
-        )
-        ctype = r.headers.get("Content-Type", "")
-        if r.status_code != 200 or not ctype.startswith("image/"):
-            return "", 404
-        data = r.raw.read(2_000_000, decode_content=True)
-        resp = Response(data, mimetype=ctype)
-        resp.headers["Cache-Control"] = "public, max-age=3600"
-        return resp
-    except Exception as e:
-        print("thumb error:", e)
-        return "", 502
-
-
-# QR redirect
+# QR Redirect
 @app.route("/qr/<qr_id>")
 def qr_redirect(qr_id):
-    doc = qr_collection.find_one({"_id": qr_id})
-    return redirect(doc["url"]) if doc else redirect("/")
+    clear_links = session.get("qr_links", {})
+    if qr_id in clear_links:
+        return redirect(clear_links[qr_id])
+    return redirect("/")
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
+    app.run(host="0.0.0.0", port=port, debug=True)

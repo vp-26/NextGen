@@ -43,27 +43,6 @@ def detect_type(info):
     return "video"
 
 
-def pick_thumbnail(info):
-    """Thumbnail ka URL (history ke liye). Na mile to khaali string."""
-    thumb = info.get("thumbnail")
-    if thumb:
-        return thumb
-    thumbs = [t for t in (info.get("thumbnails") or []) if t.get("url")]
-    if thumbs:
-        return thumbs[-1]["url"]
-    # Carousel mein pehli entry ka thumbnail
-    for entry in info.get("entries") or []:
-        if entry:
-            t = pick_thumbnail(entry)
-            if t:
-                return t
-    return ""
-
-
-def pick_title(info):
-    return (info.get("title") or "").strip()[:120]
-
-
 def fetch_media_data(url):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     cookies_path = os.path.join(current_dir, "cookies.txt")
@@ -87,9 +66,6 @@ def fetch_media_data(url):
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
-            title = pick_title(info)
-            thumbnail = pick_thumbnail(info)
-
             # Carousel / playlist
             if info.get("entries"):
                 urls = []
@@ -105,8 +81,6 @@ def fetch_media_data(url):
                         "url": urls[0],
                         "urls": urls,
                         "type": "multiple",
-                        "title": title,
-                        "thumbnail": thumbnail,
                     }
 
             media_url = pick_url(info)
@@ -116,13 +90,7 @@ def fetch_media_data(url):
                     "message": "Could not find any downloadable content.",
                 }
 
-            return {
-                "status": "success",
-                "url": media_url,
-                "type": detect_type(info),
-                "title": title,
-                "thumbnail": thumbnail,
-            }
+            return {"status": "success", "url": media_url, "type": detect_type(info)}
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
